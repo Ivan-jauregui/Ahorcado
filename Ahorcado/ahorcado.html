@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahorcado</title>
+    <link rel="stylesheet" href="ahorcado.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 1000px;
+            background-color: #f0f0f0;
+        }
+        .main-container {
+            text-align: center;
+            height: 700px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .container-ahorcado input {
+            margin-right: 10px;
+            padding: 5px;
+        }
+        .opciones button {
+            margin: 5px;
+        }
+        .palabra {
+            font-size: 24px;
+        }
+        .letra {
+            width: 30px;
+            border-bottom: 2px solid #000;
+            margin: 0 5px;
+            font-size: 24px;
+        }
+        .imagen-ahorcado {
+            margin-top: 20px;
+        }
+        .imagen-ahorcado img {
+            width: 150px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+
+        <h1 class="title">Ahorcado</h1>
+
+        <div class="imagen-ahorcado">
+            <img id="imagen-ahorcado" src="ahorcado6.png" alt="Ahorcado">
+        </div>
+
+        <div class="container-ahorcado">
+            <input type="text" placeholder="Introduzca una letra" id="letra-input" maxlength="1">
+            <button onclick="buscarLetra()">Buscar</button>
+        </div>
+
+        <div class="palabra" id="palabra-container">
+            <div id="palabra-display"></div>
+        </div>
+
+        <div class="mas">
+            <h3 id="intentos-restantes">Intentos restantes: 6</h3>
+            <h3 id="puntaje-jugador">Puntaje: 0</h3>
+            <div class="opciones">
+                <button class="reset" onclick="resetGame()">Elegir otra palabra</button>
+                <button class="pistas" onclick="mostrarPista()">Pista</button>
+            </div>
+        </div>
+        
+
+    </div>
+
+    <script>
+        const palabras = ["elefante", "galaxia", "jazmín", "lámpara", "murciélago", "nave", "orquídea", "pájaro", "quimera", "ráfaga", "sombra", "tiburón", "universo", "viento", "xilófono", "yate", "zorro" ];
+        let palabra = palabras[Math.floor(Math.random() * palabras.length)];
+        let intentosRestantes = 6;
+        let letrasAdivinadas = [];
+        let puntajeTotal = 0;
+
+
+        const palabraDisplay = document.getElementById('palabra-display');
+        const intentosRestantesDisplay = document.getElementById('intentos-restantes');
+        const letraInput = document.getElementById('letra-input');
+        const imagenAhorcado = document.getElementById('imagen-ahorcado');
+
+        function iniciarJuego() {
+            palabraDisplay.innerHTML = '';
+            for (let i = 0; i < palabra.length; i++) {
+                const span = document.createElement('span');
+                span.className = 'letra';
+                span.innerText = '_';
+                palabraDisplay.appendChild(span);
+            }
+            imagenAhorcado.src = `ahorcado6.png`;
+        }
+
+        function buscarLetra() {
+            const letra = letraInput.value.toLowerCase();
+            if (letra && !letrasAdivinadas.includes(letra)) {
+                letrasAdivinadas.push(letra);
+                letraInput.value = '';
+                actualizarPalabra();
+            }
+        }
+
+        function actualizarPalabra() {
+            let acierto = false;
+            const letras = palabraDisplay.getElementsByClassName('letra');
+            for (let i = 0; i < palabra.length; i++) {
+                if (palabra[i] === letrasAdivinadas[letrasAdivinadas.length - 1]) {
+                    letras[i].innerText = palabra[i];
+                    acierto = true;
+                }
+            }
+            if (!acierto) {
+                intentosRestantes--;
+                imagenAhorcado.src = `ahorcado${0 + intentosRestantes}.png`;
+                intentosRestantesDisplay.innerText = `Intentos restantes: ${intentosRestantes}`;
+            }
+            verificarFinJuego();
+        }
+
+        function verificarFinJuego() {
+            const letras = palabraDisplay.getElementsByClassName('letra');
+            let palabraCompleta = true;
+            for (let i = 0; i < letras.length; i++) {
+                if (letras[i].innerText === '_') {
+                    palabraCompleta = false;
+                    break;
+                }
+            }
+            if (palabraCompleta) {
+                alert('¡Ganaste! La palabra es ' + palabra);
+                guardarPuntaje(10); // Asigna un puntaje
+                resetGame();
+            } else if (intentosRestantes === 0) {
+                alert('Perdiste. La palabra es ' + palabra);
+                guardarPuntaje(0); // Puntaje de 0 si pierdes
+                resetGame();
+            }
+        }
+
+        function guardarPuntaje(puntaje) {
+    puntajeTotal += puntaje;
+    const jugador = prompt("Ingresa tu nombre:");
+    fetch('http://localhost:3000/guardar-puntaje', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ jugador, puntaje })
+    })
+    .then(response => response.text())
+    .then(data => {
+        console.log(data);
+        // Actualiza el puntaje acumulativo en el HTML
+        document.getElementById('puntaje-jugador').innerText = `Puntaje: ${puntajeTotal}`;
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+
+        function resetGame() {
+            palabra = palabras[Math.floor(Math.random() * palabras.length)];
+            intentosRestantes = 6;
+            letrasAdivinadas = [];
+            intentosRestantesDisplay.innerText = `Intentos restantes: ${intentosRestantes}`;
+            iniciarJuego();
+        }
+
+        function mostrarPista() {
+            const letrasFaltantes = palabra.split('').filter(letra => !letrasAdivinadas.includes(letra));
+            if (letrasFaltantes.length > 0) {
+                const letraPista = letrasFaltantes[Math.floor(Math.random() * letrasFaltantes.length)];
+                letrasAdivinadas.push(letraPista);
+                actualizarPalabra();
+            }
+        }
+
+        iniciarJuego();
+    </script>
+</body>
+</html>
